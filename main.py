@@ -1,6 +1,4 @@
 from api import create_app
-from flask import jsonify
-import pyodbc
 
 app = create_app()
 
