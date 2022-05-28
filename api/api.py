@@ -54,37 +54,79 @@ def customerLogin():
             cursor = conn.cursor()
             cursor.execute('SELECT * FROM [dbo].[customer] WHERE (email = ?) AND (pwd = ?)',(email, pwd))
             rows = [x for x in cursor]
-            print(rows)
+            cols = [x[0] for x in cursor.description]
+            customers = []
+            cusID = 0
+            
+            for row in rows:
+                customer = {}
+                for prop, val in zip(cols, row):
+                    customer[prop] = val
+                customers.append(customer)
+            for i, cus in enumerate(customers): 
+                cusID = cus['customerID'] 
+                   
+            print(cusID)
             if not rows:
                 return  make_response(jsonify({"data" : "Invalid Credintial.", "status" : "Error"}), 500)
             else:
-                return  make_response(jsonify({"data" : "Login Successfully.", "status" : "Success"}), 200)
+                return  make_response(jsonify({"userData" : cusID , "data" : "Login Successfully.", "status" : "Success"}), 200)
                 
         except Exception as e:
-            return  make_response(jsonify({"data" : {e}, "status" : "Error"}), 500)    
+            return  make_response(jsonify({"data" : 'Server Error.', "status" : "Error"}), 500)    
     else:
         return make_response(jsonify({"data" : "Content Not Supported!.", "status" : "Error"}), 500)    
 
-@api.route('/view', methods=['GET'])
-def create():
-    try:
-        cursor = conn.cursor()
-        cursor.execute('SELECT * FROM [dbo].[customer]')
-        print("row: ", cursor.rowcount , " row/s Effected")
-        rows = [x for x in cursor]
-        cols = [x[0] for x in cursor.description]
-        products = []
-        
-        for row in rows:
-            product = {}
-            for prop, val in zip(cols, row):
-                product[prop] = val
-            products.append(product)
-        # Create a string representation of your array of products.
-        return  make_response(jsonify({"data" : products, "status" : "Success"}), 200)
-    except Exception as e:
-        # return f"An Error Occured: {e}"
-        return  make_response(jsonify({"data" : {e}, "status" : "Error"}), 500)
+@api.route('/viewBill', methods=['POST'])
+def billsView():
+    content_type = request.headers.get('Content-Type')
+    if (content_type == 'application/json'):
+        json = request.json
+        customerID = json['customerID']
+
+        try:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM bill  INNER JOIN customer ON bill.customerID = customer.customerID INNER JOIN product ON bill.productID = product.productID WHERE customer.customerID = ?',(customerID))
+            print("row: ", cursor.rowcount , " row/s Effected")
+            rows = [x for x in cursor]
+            cols = [x[0] for x in cursor.description]
+            bills = []
+            
+            for row in rows:
+                bill = {}
+                for prop, val in zip(cols, row):
+                    bill[prop] = val
+                bills.append(bill)
+            # Create a string representation of your array of bills.
+            return  make_response(jsonify({"data" : bills, "status" : "Success"}), 200)
+        except Exception as e:
+            # return f"An Error Occured: {e}"
+            return  make_response(jsonify({"data" : 'Server Error.', "status" : "Error"}), 500)
+    else:
+        return make_response(jsonify({"data" : "Content Not Supported!.", "status" : "Error"}), 500)    
+
+@api.route('/deletebill', methods=['DELETE'])
+def deleteBill():
+    content_type = request.headers.get('Content-Type')
+    if (content_type == 'application/json'):
+        json = request.json
+        customerID = json['customerID']
+        orderID = json['orderID']
+        try:
+            cursor = conn.cursor()
+            cursor.execute('DELETE FROM bill WHERE (orderID = ?) AND (customerID = ?)',(customerID,orderID))
+            print("row: ", cursor.rowcount , " row/s Effected")
+            
+            if cursor.rowcount == 0:
+                # Create a string representation of your array of bills.
+                return  make_response(jsonify({"data" : "Bill Detail Deleted Successfully", "status" : "Success"}), 200)
+            else:
+                return  make_response(jsonify({"data" : 'This bill details Already Deleted.', "status" : "Error"}), 500)
+        except Exception as e:
+            # return f"An Error Occured: {e}"
+            return  make_response(jsonify({"data" : 'Server Error.', "status" : "Error"}), 500)
+    else:
+        return make_response(jsonify({"data" : "Content Not Supported!.", "status" : "Error"}), 500)   
 
 @api.route('/viewExample', methods=['GET'])
 def createExample():
